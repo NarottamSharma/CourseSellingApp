@@ -1,5 +1,5 @@
-const {Router} = express();
-const courseRouter = Router()
+const express = require("express")
+const courseRouter = express.Router()
 
 courseRouter.post("/course",(req,res)=>{
     res.json({
@@ -9,10 +9,9 @@ courseRouter.post("/course",(req,res)=>{
 
 courseRouter.get("/preview",(req,res)=>{
     res.json({
-        mesaage:"Course Preview"
+        message:"Course Preview"
     })
 })
 
-module.exports={
-    courseRouter:courseRouter
-}
+module.exports = courseRouter
+

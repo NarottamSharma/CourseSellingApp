@@ -1,39 +1,40 @@
-const { Schema } = require("mongoose");
-const ObjectId = Schema.ObjectId();
+const { Schema, default: mongoose } = require("mongoose");
 
-const userSchema = Schema({
-    email: { String, unique: true },
+const userSchema = new Schema({
+    email: { type: String, unique: true },
     password: String,
     firstName: String,
     lastName: String,
 });
 
-const adminSchema = Schema({
-    email: { String, unique: true },
+const adminSchema = new Schema({
+    email: { type: String, unique: true },
     password: String,
     firstName: String,
     lastName: String,
 });
 
-const courseSchema = Schema({
+const courseSchema = new Schema({
     title: String,
     description: String,
     price: Number,
     imageUrl: String,
-    creatorId: ObjectId,
+    creatorId: Schema.Types.ObjectId,
 });
 
-const purchaseSchema = Schema({
-    userId:ObjectId,
-    courseId:ObjectId,
+const purchaseSchema = new Schema({
+    userId: Schema.Types.ObjectId,
+    courseId: Schema.Types.ObjectId,
 });
 
-const userModel = mongoose.Model("user", userSchema);
-const adminModel = mongoose.Model("user", adminSchema);
-const courseModel = mongoose.Model("user", courseSchema);
-const purchaseModel = mongoose.Model("user", purchaseSchema);
+const userModel = mongoose.model("user", userSchema);
+const adminModel = mongoose.model("admin", adminSchema);
+const courseModel = mongoose.model("course", courseSchema);
+const purchaseModel = mongoose.model("purchase", purchaseSchema);
 
-
-module.export ={
-    
-}
+module.exports = {
+    userModel,
+    adminModel,
+    courseModel,
+    purchaseModel,
+};
