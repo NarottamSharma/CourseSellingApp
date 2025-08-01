@@ -14,7 +14,7 @@ app.use("/api/v1/admin", adminRouter);
 app.listen(3001, () => {
     console.log("Server listening on port 3001");
 });
-
+  
 async function connect(){ 
     try {
         await mongoose.connect("mongodb+srv://narottamphodegaa:Dxaf4FhfgmkANgq5@cluster0.myoyepz.mongodb.net/coursers-app");
