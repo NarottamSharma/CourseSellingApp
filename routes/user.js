@@ -3,12 +3,13 @@ const userRouter = express.Router();
 const { z } = require("zod");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const JWT_SECRET= "ewaihf[08y988";
+const {JWT_SECRET}= require("../config")
 const { userModel } = require("../db");
 
 userRouter.post("/signup", async (req, res) => {
+  const { email, password, firstName, lastName } = req.body;
   const requiredBody = z.object({
-    email: z.string().email().max(25),
+    email: z.email().max(25),
     password: z.string().min(6).max(20),
     firstName: z.string().max(20),
     lastName: z.string().max(20),
@@ -21,9 +22,16 @@ userRouter.post("/signup", async (req, res) => {
     });
   }
 
-  const { email, password, firstName, lastName } = req.body;
-
   try {
+    const existingUser = await userModel.findOne({
+      email: email,
+    });
+    if (existingUser) {
+      return res.json({
+        message: "User Already Exists, Please Sign In",
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 6);
 
     await userModel.create({
@@ -35,7 +43,7 @@ userRouter.post("/signup", async (req, res) => {
 
     return res.json({
       message: "You are Signed Up",
-      password:hashedPassword,
+      password: hashedPassword,
     });
   } catch (e) {
     return res.json({
@@ -45,32 +53,47 @@ userRouter.post("/signup", async (req, res) => {
 });
 
 userRouter.post("/signin", async (req, res) => {
-  const { email, password } = req.body;
-  const response = await userModel.findOne({
-    email: email,
-  });
-  if (!response) {
-    return res.status(403).json({
-      message: "User not found",
-    });
-  }
-  // You may want to add password verification here
-  const passwordMatch = bcrypt.compareSync(password, response.password);
-  if (passwordMatch) {
-    const token = jwt.sign(
-      {
-        id: response._id.toString(),
-      },
-      JWT_SECRET
-    );
-    return res.json({
-      token,
-    });
-  } else {
-    return res.status(403).json({
-      message: "Incorrect Credential",
-    });
-  }
+    const { email, password } = req.body;
+    try {
+        
+        // This database query could fail if there's a connection issue
+        const existingUser = await userModel.findOne({
+            email: email,
+        });
+        
+        if (!existingUser) {
+            return res.status(403).json({
+                message: "User not found",
+            });
+        }
+        
+        // This bcrypt operation could fail if the hash is corrupted
+        const passwordMatch = await bcrypt.compare(password, existingUser.password);
+        
+        if (passwordMatch) {
+            // JWT signing could fail if JWT_SECRET is invalid
+            const token = jwt.sign(
+                {
+                    id: existingUser._id.toString(),
+                },
+                JWT_SECRET
+            );
+            return res.json({
+                token,
+            });
+        } else {
+            return res.status(403).json({
+                message: "Incorrect Credential",
+            });
+        }
+    } catch (e) {
+        // Catches any unexpected errors like database connection failures,
+        // bcrypt errors, or JWT signing errors
+        console.error("Signin error:", e);
+        return res.status(500).json({
+            message: "Internal server error",
+        });
+    }
 });
 
 userRouter.get("/purchases", (_, res) => {
@@ -79,4 +102,4 @@ userRouter.get("/purchases", (_, res) => {
   });
 });
 
-module.exports = userRouter;
+module.exports = userRouter
