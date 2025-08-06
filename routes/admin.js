@@ -6,6 +6,7 @@ const { adminModel, courseModel } = require("../db");
 const adminRouter = express.Router();
 const { JWT_ADMIN_SECRET } = require("../config");
 const { adminMiddleware } = require("../middleware/admin");
+const admin = require("../middleware/admin");
 
 adminRouter.post("/signup", async (req, res) => {
   const { email, password, firstName, lastName } = req.body;
@@ -106,16 +107,31 @@ adminRouter.post("/course", adminMiddleware, async (req, res) => {
   });
 });
 
-adminRouter.put("/course", (_req, res) => {
-  res.json({
-    message: "Admin update course endpoint",
-  });
+adminRouter.put("/course", adminMiddleware, async (req, res) => {
+  const adminId = req.userId;
+  const { title, description, price, imageUrl, courseId } = req.body;
+  const course = await courseModel.updateOne(
+    { _id: courseId, creatorId: adminId },
+    {
+      title,
+      description,
+      price,
+      imageUrl,
+      creatorId: req.userId,
+    }
+  );
 });
 
-adminRouter.get("/course/bulk", (_req, res) => {
-  res.json({
-    message: "Admin get all courses endpoint",
+adminRouter.get("/course/bulk", adminMiddleware, async (req, res) => {
+  const adminId = req.userId;
+
+  const courses = await courseModel.find({
+    creatorId: adminId,
   });
+  res.json({
+    message:"Courses",
+    courses
+  })
 });
 
 module.exports = adminRouter;
