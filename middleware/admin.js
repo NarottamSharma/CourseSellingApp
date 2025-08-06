@@ -1,17 +1,24 @@
-const { jwt } = require("zod");
-const {JWT_ADMIN_SECRET}=require("../config")
-
+const jwt  = require("jsonwebtoken");
+// const { JWT_ADMIN_SECRET } = require("../config");
 
 function adminMiddleware(req, res, next) {
-  const { token } = req.header.token;
-  const decoded = jwt.verify(token, JWT_ADMIN_SECRET);
+  const token = req.headers.token;
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_ADMIN_SECRET);
+  } catch (err) {
+    return res.status(403).json({
+      message: "Invalid or expired token",
+    });
+  }
+
   if (decoded) {
-    req.userId = req.decoded.id,
-    next()
-  }else{
+    req.userId = decoded.id;
+    next();
+  } else {
     res.status(403).json({
-      message:"You are not signed in",
-    })
+      message: "You are not signed in",
+    });
   }
 }
 

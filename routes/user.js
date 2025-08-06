@@ -3,8 +3,9 @@ const userRouter = express.Router();
 const { z } = require("zod");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const {JWT_SECRET}= require("../config")
-const { userModel } = require("../db");
+const { userMiddleware } = require("../middleware/user");
+const { JWT_SECRET } = require("../config");
+const { userModel, purchaseModel, courseModel } = require("../db");
 
 userRouter.post("/signup", async (req, res) => {
   const { email, password, firstName, lastName } = req.body;
@@ -53,53 +54,60 @@ userRouter.post("/signup", async (req, res) => {
 });
 
 userRouter.post("/signin", async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        
-        // This database query could fail if there's a connection issue
-        const existingUser = await userModel.findOne({
-            email: email,
-        });
-        
-        if (!existingUser) {
-            return res.status(403).json({
-                message: "User not found",
-            });
-        }
-        
-        // This bcrypt operation could fail if the hash is corrupted
-        const passwordMatch = await bcrypt.compare(password, existingUser.password);
-        
-        if (passwordMatch) {
-            // JWT signing could fail if JWT_SECRET is invalid
-            const token = jwt.sign(
-                {
-                    id: existingUser._id.toString(),
-                },
-                JWT_SECRET
-            );
-            return res.json({
-                token,
-            });
-        } else {
-            return res.status(403).json({
-                message: "Incorrect Credential",
-            });
-        }
-    } catch (e) {
-        // Catches any unexpected errors like database connection failures,
-        // bcrypt errors, or JWT signing errors
-        console.error("Signin error:", e);
-        return res.status(500).json({
-            message: "Internal server error",
-        });
+  const { email, password } = req.body;
+  try {
+    // This database query could fail if there's a connection issue
+    const existingUser = await userModel.findOne({
+      email: email,
+    });
+
+    if (!existingUser) {
+      return res.status(403).json({
+        message: "User not found",
+      });
     }
+
+    // This bcrypt operation could fail if the hash is corrupted
+    const passwordMatch = await bcrypt.compare(password, existingUser.password);
+
+    if (passwordMatch) {
+      // JWT signing could fail if JWT_SECRET is invalid
+      const token = jwt.sign(
+        {
+          id: existingUser._id.toString(),
+        },
+        JWT_SECRET
+      );
+      return res.json({
+        token,
+      });
+    } else {
+      return res.status(403).json({
+        message: "Incorrect Credential",
+      });
+    }
+  } catch (e) {
+    // Catches any unexpected errors like database connection failures,
+    // bcrypt errors, or JWT signing errors
+    console.error("Signin error:", e);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 });
 
-userRouter.get("/purchases", (_, res) => {
+userRouter.get("/purchases", userMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const purchases = await purchaseModel.find({
+    userId,
+  });
+  const courseData = await courseModel.find({
+    _id: { $in: purchases.map((x) => x.courseId) },
+  });
   res.json({
-    message: "User purchases endpoint",
+    purchases,
+    courseData
   });
 });
 
-module.exports = userRouter
+module.exports = userRouter;

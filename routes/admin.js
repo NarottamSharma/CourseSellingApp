@@ -6,12 +6,11 @@ const { adminModel, courseModel } = require("../db");
 const adminRouter = express.Router();
 const { JWT_ADMIN_SECRET } = require("../config");
 const { adminMiddleware } = require("../middleware/admin");
-const admin = require("../middleware/admin");
 
 adminRouter.post("/signup", async (req, res) => {
   const { email, password, firstName, lastName } = req.body;
   const requiredBody = z.object({
-    email: z.email().max(25),
+    email: z.string().email(),
     password: z.string().min(6).max(20),
     firstName: z.string().max(20),
     lastName: z.string().max(20),
@@ -93,13 +92,14 @@ adminRouter.post("/signin", async (req, res) => {
 });
 
 adminRouter.post("/course", adminMiddleware, async (req, res) => {
+  const adminId = req.userId;
   const { title, description, price, imageUrl } = req.body;
   const course = await courseModel.create({
-    title,
-    description,
-    price,
-    imageUrl,
-    creatorId: req.userId,
+    title: title,
+    description: description,
+    imageUrl: imageUrl,
+    price: price,
+    creatorId: adminId,
   });
   res.json({
     message: "Course created",
@@ -111,15 +111,21 @@ adminRouter.put("/course", adminMiddleware, async (req, res) => {
   const adminId = req.userId;
   const { title, description, price, imageUrl, courseId } = req.body;
   const course = await courseModel.updateOne(
-    { _id: courseId, creatorId: adminId },
     {
-      title,
-      description,
-      price,
-      imageUrl,
-      creatorId: req.userId,
+      _id: courseId, //filter
+      creatorId: adminId,
+    },
+    {
+      title: title,
+      description: description,
+      imageUrl: imageUrl,
+      price: price,
     }
   );
+  res.json({
+    message: "Course updated",
+    courseId: course._id,
+  });
 });
 
 adminRouter.get("/course/bulk", adminMiddleware, async (req, res) => {
@@ -128,10 +134,11 @@ adminRouter.get("/course/bulk", adminMiddleware, async (req, res) => {
   const courses = await courseModel.find({
     creatorId: adminId,
   });
+
   res.json({
-    message:"Courses",
-    courses
-  })
+    message: "Courses",
+    courses,
+  });
 });
 
 module.exports = adminRouter;
